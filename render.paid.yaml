@@ -1,0 +1,21 @@
+# Render Blueprint (paid, about $7 a month plus disk). Copy this into render.yaml to use it.
+# Keeps accounts permanently on a 1 GB disk and never sleeps.
+services:
+  - type: web
+    name: dubai-rental-yield-finder
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: RYF_DB
+        value: /data/app.db
+      - key: ANTHROPIC_API_KEY
+        sync: false

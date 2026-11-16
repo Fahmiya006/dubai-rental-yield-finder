@@ -1,0 +1,23 @@
+# UAE cost assumptions. VERIFY against current DLD / RERA rules before relying on results.
+country: UAE
+currency: AED
+buying_costs:
+  dld_transfer_pct: 0.04        # Dubai Land Department transfer fee
+  dld_admin_fee: 580            # AED, admin fee (approx.)
+  agent_pct: 0.02               # buyer-side agent commission
+  agent_vat_pct: 0.05           # VAT on agent commission
+  trustee_fee_high: 4000        # AED, for price >= 500k (+VAT)
+  trustee_fee_low: 2000         # AED, for price < 500k (+VAT)
+  trustee_threshold: 500000
+  trustee_vat_pct: 0.05
+  mortgage_registration_pct: 0.0025   # only if financed
+running_costs:
+  vacancy_pct: 0.06             # share of year unrented
+  management_pct: 0.05          # property manager fee on rent
+  maintenance_pct_of_rent: 0.04
+  # service charge in AED per sq ft per year (RERA index varies by building)
+  service_charge_aed_sqft: 14
+mortgage:
+  rate: 0.05
+  max_ltv_expat_first: 0.80
+  years: 25
