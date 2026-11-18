@@ -1,5 +1,4 @@
 <title>Dubai Yield Finder</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Compare Dubai areas by rental yield after real UAE buying costs, with growth estimates, a calculator, listing check and AI assistant.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
 <style>
@@ -252,6 +251,27 @@ input[type=text],input[type=email],input[type=password],input[type=number],input
 .l-hero::before,.l-hero::after{display:none!important}
 .l-hero p{color:#1c3434}
 @media (max-width:759px){.l-hero{background-position:0 center!important}}
+
+/* full-width desktop layout */
+.top{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+@media (min-width:900px){
+ .top{padding-left:clamp(24px,4vw,72px);padding-right:clamp(24px,4vw,72px)}
+ .top-in{max-width:none}
+ main{padding-left:clamp(12px,3vw,60px);padding-right:clamp(12px,3vw,60px)}
+ .wrap{max-width:none}
+ .wrap.narrow{max-width:900px}
+ .home-grid{grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:28px}
+ .l-nav{padding-left:clamp(24px,4vw,72px);padding-right:clamp(24px,4vw,72px)}
+ .l-nav-in,.l-cards,.l-note{max-width:none}
+ .l-hero-in{max-width:none;padding-left:clamp(32px,6vw,110px);padding-right:clamp(32px,6vw,110px)}
+ .l-cards,.l-note{padding-left:clamp(24px,6vw,110px);padding-right:clamp(24px,6vw,110px)}
+}
+@media (min-width:1300px){
+ .home-grid .list2{grid-template-columns:1fr 1fr}
+ .gtiles .glass{min-height:160px}
+ .glass .val{font-size:clamp(30px,3vw,46px)}
+}
+@media (min-width:1700px){.home-grid{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}.home-grid .list2{grid-template-columns:1fr 1fr 1fr}}
 </style>
 <div id="app"></div>
 <script>
@@ -778,7 +798,7 @@ function miniAsk(q,steps,done,fallback){
   var f=miniFacts(q);
   if(!f){done('Mini-GPT needs an area (for example Motor City) or the word “best”. Try: “what is the net yield of a studio in Motor City” or “best yield for 1 bedroom”.\n\n'+localAnswer(q));return}
   steps.push('Mini-GPT (my own model)','facts: '+f.label);
-  api('POST','/api/minigpt',{prompt:f.facts+'\nQ: '+f.q+'\nA: '}).then(function(r){
+  Promise.race([api('POST','/api/minigpt',{prompt:f.facts+'\nQ: '+f.q+'\nA: '}),new Promise(function(_,rej){setTimeout(function(){rej(new Error('it took too long to answer'))},25000)})]).then(function(r){
     var ans=(r&&r.text)||'',have=(f.facts.match(/\d[\d,]*\.?\d*/g)||[]).map(function(x){return x.replace(/[.,]+$/,'')}),
         used=(ans.match(/\d[\d,]*\.?\d*/g)||[]).map(function(x){return x.replace(/[.,]+$/,'')});
     var ok=ans&&used.every(function(x){return have.indexOf(x)>=0});
