@@ -389,7 +389,7 @@ class H(BaseHTTPRequestHandler):
             if not prompt.startswith("F: ") or "\nQ: " not in prompt or len(prompt) > 600 or not prompt.endswith("\nA: "):
                 raise ApiError(400, "Bad prompt")
             tg, params, cfg = m
-            return self._send(200, {"text": tg.generate(params, cfg, prompt, max_new=200, temperature=0.0).strip()})
+            return self._send(200, {"text": tg.generate_fast(params, cfg, prompt, max_new=200).strip()})
         if path in ("/api/chat", "/api/agent"):
             u = self._need()
             throttle(HITS, f"ai|{u['id']}", 20, 60)

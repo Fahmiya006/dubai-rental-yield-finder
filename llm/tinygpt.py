@@ -214,6 +214,56 @@ def generate(p, cfg, prompt: str, max_new=220, temperature=0.0, top_k=8, seed=0,
     return decode(out)
 
 
+def generate_fast(p, cfg, prompt: str, max_new=220, stop="\n"):
+    """Greedy decoding with a key/value cache: same output as generate(temperature=0), far fewer operations.
+    Falls back to generate() if the text would not fit in one context window."""
+    ids = encode(prompt)
+    if len(ids) >= cfg.block:
+        return generate(p, cfg, prompt, max_new=max_new, temperature=0.0, stop=stop)
+    d, H = cfg.d, cfg.heads
+    hd = d // H
+    logits, cache = forward(p, cfg, np.array([ids]), keep=True)
+    K = [c["k"] for c in cache["layers"]]  # (1,H,T,hd)
+    V = [c["v"] for c in cache["layers"]]
+    last = logits[0, -1].astype(np.float64)
+    out = []
+    for _ in range(max_new):
+        last[PAD] = -1e9
+        nxt = int(last.argmax())
+        ch = CHARS[nxt - 1]
+        if ch == stop:
+            break
+        out.append(nxt)
+        if len(ids) >= cfg.block - 1:  # window is full: finish with the sliding-window decoder
+            rest = generate(p, cfg, prompt + decode(out), max_new=max_new - len(out), temperature=0.0, stop=stop)
+            return decode(out) + rest
+        t = len(ids)
+        ids.append(nxt)
+        x = (p["tok"][nxt] + p["pos"][t])[None, None, :]  # (1,1,d)
+        for i in range(cfg.layers):
+            n = f"l{i}."
+            h, _ = ln_fwd(x, p[n + "ln1.g"], p[n + "ln1.b"])
+            qkv, _ = lin_fwd(h, p[n + "qkv.w"], p[n + "qkv.b"])
+            q, k, v = (a.reshape(1, 1, H, hd).transpose(0, 2, 1, 3) for a in np.split(qkv, 3, axis=-1))
+            K[i] = np.concatenate([K[i], k], axis=2)
+            V[i] = np.concatenate([V[i], v], axis=2)
+            sc = (q @ K[i].transpose(0, 1, 3, 2)) / np.sqrt(hd)
+            sc = sc - sc.max(-1, keepdims=True)
+            att = np.exp(sc)
+            att /= att.sum(-1, keepdims=True)
+            y = (att @ V[i]).transpose(0, 2, 1, 3).reshape(1, 1, d)
+            o, _ = lin_fwd(y, p[n + "o.w"], p[n + "o.b"])
+            x = x + o
+            h2, _ = ln_fwd(x, p[n + "ln2.g"], p[n + "ln2.b"])
+            f, _ = lin_fwd(h2, p[n + "fc.w"], p[n + "fc.b"])
+            a, _ = gelu_fwd(f)
+            m, _ = lin_fwd(a, p[n + "pr.w"], p[n + "pr.b"])
+            x = x + m
+        hf, _ = ln_fwd(x, p["lnf.g"], p["lnf.b"])
+        last = (hf @ p["head.w"])[0, 0].astype(np.float64)
+    return decode(out)
+
+
 def save(path, p, cfg):
     np.savez_compressed(path, __cfg=np.array(json.dumps(dict(cfg))), **p)
 
